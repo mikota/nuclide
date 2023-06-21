@@ -24,10 +24,6 @@ public:
 	void NSSquadMonster(void);
 
 #ifdef SERVER
-	/* overrides */
-	virtual void Spawned(void);
-	virtual void SpawnKey(string, string);
-
 	/** Overridable: Called when this NPC became squad leader. */
 	virtual void HasBecomeSquadLeader(void);
 	/** Overridable: Called when this NPC joined a squad. */
@@ -55,8 +51,6 @@ public:
 
 #ifdef SERVER
 private:
-	int m_iSquadLeaderBody;
-	bool m_bStartAsLeader;
 	bool m_inSquad;
 	NSSquadMonster m_eSquadLeader;
 

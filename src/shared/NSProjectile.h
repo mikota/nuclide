@@ -137,8 +137,3 @@ public:
 #ifdef CLIENT
 void NSProjectile_ReadEntity(bool);
 #endif
-
-#ifdef SERVER
-void NSProjectile_SpawnDef(string entityDef, NSEntity theOwner)
-void NSProjectile_SpawnDefAttachment(string entityDef, NSEntity theOwner, int attachmentID)
-#endif

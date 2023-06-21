@@ -45,14 +45,7 @@ void NSRenderableEntity::RendererRestarted( void ) {
 
 void NSRenderableEntity::_UpdateGeomset(void)
 {
-	int firstBody = (m_iBody & 0x0F);
-	int secondBody = ((m_iBody >> 4) & 0x0F);
-
-	//print(sprintf("%i body 1: %i body 2: %i\n", m_iBody , firstBody, secondBody));
-
-	setcustomskin(this, "",
-		sprintf("geomset 0 %i\ngeomset 1 %i\ngeomset 2 %i\n", secondBody, firstBody, secondBody)
-	);
+	setcustomskin(this, "", sprintf("geomset 0 %i\ngeomset 1 %i\n", m_iBody, m_iBody));
 }
 #endif
 
@@ -283,7 +276,7 @@ NSRenderableEntity::ReceiveEntity(float flNew, float flChanged)
 	if (flChanged & RDENT_CHANGED_SIZE)
 		setsize(this, mins * scale, maxs * scale);
 	if (flChanged & RDENT_CHANGED_BODY)
-		_UpdateGeomset();
+		setcustomskin(this, "", sprintf("geomset 0 %i\ngeomset 1 %i\n", m_iBody, m_iBody));
 
 	setorigin(this, origin);
 }
@@ -548,6 +541,9 @@ NSRenderableEntity::predraw(void)
 		angles[1] -= frametime * 120.0;
 	}
 
+	if (serverkeyfloat(SERVERKEY_PAUSESTATE) != 1)
+		frame1time += frametime;
+
 	processmodelevents(modelindex, frame, m_flBaseTime,
 		frame1time, HandleAnimEvent);
 
@@ -779,8 +775,6 @@ NSRenderableEntity::HandleAnimEvent(float flTimeStamp, int iCode, string strData
 				tokenize(m_strModelEventCB); /* ensure argv() is 'rewound'... */
 			}
 		}
-		
-		//print(sprintf("Received: %f %i %S\n", flTimeStamp, iCode, strData));
 #else
 		NSLog("Unknown model event: %f %i %S", flTimeStamp, iCode, strData);
 #endif
