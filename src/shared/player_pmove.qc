@@ -351,7 +351,9 @@ NSClientPlayer::Physics_InputPreMove(void)
 		if (veh.CanDriverCrouch() == false)
 			input_buttons &= ~INPUT_BUTTON8;
 }
-
+float punchangle_recovery(float punchangle) {
+	return 0.05 * (-0.2 * pow(1.2, fabs(punchangle)) + 4);
+}
 /* timers get processed here after physics are run */
 void
 NSClientPlayer::Physics_InputPostMove(void)
@@ -362,9 +364,12 @@ NSClientPlayer::Physics_InputPostMove(void)
 	w_idle_next = max(0, w_idle_next - input_timelength);
 	weapontime += input_timelength;
 	punch = max(0, 1.0f - (input_timelength * 4));
-	punchangle[0] *= punch;
-	punchangle[1] *= punch;
-	punchangle[2] *= punch;
+	if (punchangle[0] < 0) {
+		punchangle[0] += punchangle_recovery(punchangle[0]);
+	}
+
+	punchangle[1] *= .95;
+	punchangle[2] *= .99;
 
 	/* player animation code */
 	UpdatePlayerAnimation(input_timelength);
