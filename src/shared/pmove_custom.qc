@@ -223,27 +223,97 @@ PMoveCustom_AccelWater(float move_time, float premove)
 	self.velocity = self.velocity + normalize(vecWishVel) * flFriction;
 }
 
+/*Calculates makevectors for the ladder normal
+e.g. adding v_forward to the player's velocity
+will make him move away from the ladder.
+This is used for jumping off ladders
+and for moving up/down ladders via strafe keys.*/
+void
+PMoveCustom_LadderNormal_MakeVectors() {
+	vector ladderpos = trace_ent.absmin + (0.5f * (trace_ent.absmax - trace_ent.absmin));
+	ladderpos[2] = self.origin[2];
+	makevectors(normalize(ladderpos - self.origin));
+}
+
 void
 PMoveCustom_AccelLadder(float move_time, float premove, vector wish_dir, float wish_speed)
 {
-	vector vPlayerVector;
+	vector forwardAndBackKeyVelocity = [0,0,0];
+	vector strafeKeyVelocity = [0,0,0];
+
+	//First, we calculate the movement with the forward/back keys.
+	//Then, we calculate the movement with the strafe keys.
+	//Then, we add the two together.
+	//For clarity, the comments for the forward/back keys
+	//assume no strafing, and the comments for the strafe keys
+	//assume no forward/back movement.
+
+	float ladder_speed = 220;
+	if (input_buttons & INPUT_BUTTON8) {
+		//crouching, move slower
+		ladder_speed /= 2.5;
+	}
 
 	makevectors(input_angles);
-	vPlayerVector = v_forward;
-	vPlayerVector = (vPlayerVector * 240);
-
-	if (input_movevalues[0] > 0) {
-		self.velocity = vPlayerVector;
+	vector pl_forward = v_forward;
+	vector pl_right = v_right;
+	vector pl_up = v_up;
+	PMoveCustom_LadderNormal_MakeVectors();
+	//Calculate vectors from ladder's "POV".
+	//If player is facing ladder, ld_right will be player's left,
+	//ld_forward will be player's back
+	//ld_up will be player's down(I think? For some reason?).
+	vector ld_forward = v_forward;
+	vector ld_right = v_right;
+	vector ld_up = v_up;
+	if (input_movevalues[0]) {
+		//Forward and back keys first.
+		forwardAndBackKeyVelocity = pl_forward;
+		forwardAndBackKeyVelocity[2] += 0.5;
+		forwardAndBackKeyVelocity[2] *= 2;
+		//We add 0.5 to the z component so that
+		//even if the player is looking slightly down on the ladder,
+		//he will still move up.
+		//We multiply the z component by 2 so that the player
+		//doesn't have to look up as much to gain full speed,
+		//looking perpendicular to the ladder will give approx full up speed.	
+		forwardAndBackKeyVelocity = normalize(forwardAndBackKeyVelocity);
+		forwardAndBackKeyVelocity *= ladder_speed;
+		if (input_movevalues[0] < 0) {
+			forwardAndBackKeyVelocity[2] *= -1; //invert the up/down movement
+			//We now need to invert the horizontal movement as well.
+			float dotproduct = forwardAndBackKeyVelocity * ld_right;
+			forwardAndBackKeyVelocity -= 2 * ld_right * dotproduct;
+			//This is hard to explain without visual aid, but basically
+			//We do the dot product to know how much horizontally
+			//the player is moving in pre-inverted forwardAndBackVelocity,
+			//then we multiply that by negative 2 and add it to
+			//forwardAndBackVelocity to get the inverted horizontal movement.
+		}
+	}
+	if (input_movevalues[1]) {
+		//Strafe keys now
+		strafeKeyVelocity = pl_right * input_movevalues[1];
+		float dot_right = ld_right * strafeKeyVelocity;
+		float dot_forward = ld_forward * strafeKeyVelocity;
+		//If player is at a 45 degree angle to the ladder,
+		//dot_right and dot_forward will be ~equal.
+		//Otherwise, one will be larger than the other.
+		//If dot_right is larger, the player should move more sideways
+		//If dot_forward is larger, the player should move more up/down.
+		strafeKeyVelocity = dot_right * ld_right - dot_forward * ld_up;
+		strafeKeyVelocity = normalize(strafeKeyVelocity) * ladder_speed;
+		strafeKeyVelocity *= 0.8; //magic number, feels closer to the original game
+	}
+	if (input_movevalues) {
+		self.velocity = forwardAndBackKeyVelocity + strafeKeyVelocity;
 	} else {
 		self.velocity = [0,0,0];
 	}
 
-	if (input_buttons & INPUT_BUTTON2) {
-		vector ladderpos = trace_ent.absmin + (0.5f * (trace_ent.absmax - trace_ent.absmin));
-		ladderpos[2] = self.origin[2];
-		makevectors(normalize(ladderpos - self.origin));
-		self.velocity = v_forward * -250;
-		self.velocity += v_up * 100;
+	if (input_buttons & INPUT_BUTTON2) {		
+		//jumping off ladder
+		self.velocity = ld_forward * 250;
 		self.flags &= ~FL_ONGROUND;
 		self.flags &= ~FL_JUMPRELEASED;
 	}
